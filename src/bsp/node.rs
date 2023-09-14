@@ -88,15 +88,6 @@ impl Node {
         }
 
         let entries_aabb = Aabb::merged(mid_entries.iter().map(|e| e.aabb));
-        match dimension {
-            Dimension::X => {
-                mid_entries.sort_unstable_by(|a, b| a.aabb.top().partial_cmp(&b.aabb.top()).unwrap());
-            },
-            Dimension::Y => {
-                mid_entries.sort_unstable_by(|a, b| a.aabb.right().partial_cmp(&b.aabb.right()).unwrap());
-            },
-        }
-
         Self {
             entries: mid_entries,
             entries_aabb,

@@ -8,9 +8,9 @@ extern crate opengl_graphics;
 extern crate piston;
 
 mod bsp;
-mod primitive;
 mod collision_resolution;
-mod debug_renderable;
+mod constraint;
+mod primitive;
 mod util;
 mod world;
 
@@ -19,7 +19,7 @@ use std::f64::consts::PI;
 use graphics::color::{BLACK, RED, WHITE};
 use primitive::{Body, Mass, Shape, Vec2};
 use rand::Rng;
-use world::{CollisionData, World, Entity};
+use world::{CollisionData, World};
 
 use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{GlGraphics, OpenGL};
@@ -73,7 +73,8 @@ impl App {
             for collision in &self.collisions {
                 let transform = c.transform.trans(x, y);
 
-                let from = collision.event.collision.contact + collision.event.collision.normal.scaled(20.0);
+                let from = collision.event.collision.contact
+                    + collision.event.collision.normal.scaled(20.0);
                 let to = collision.event.collision.contact;
 
                 line_from_to(WHITE, 1.0, [from.x, -from.y], [to.x, -to.y], transform, gl);
@@ -89,17 +90,23 @@ impl App {
                     gl,
                 );
             }
-
-            //self.world.debug_render(c, gl);
         });
     }
 
     fn update(&mut self, args: &UpdateArgs) {
-        println!("{:?}", args.dt);
-        let ids : Vec<Entity> = self.world.ids().collect();
-        for id in ids {
-            self.world.apply_force(id, Vec2::new_at(0.0, -3000.0));
-            self.world.apply_force(id, -self.world.body(id).unwrap().position.scaled(10.0));
+        let mut force_updates = vec![];
+        for (entity, body) in self.world.entities() {
+            let mass_value = if let Mass::Value(val) = *body.get_mass() {
+                val
+            } else {
+                continue;
+            };
+
+            force_updates.push((*entity, Vec2::new_at(0.0, -300.0 * mass_value)));
+        }
+
+        for (entity, force) in force_updates {
+            self.world.apply_force(entity, force);
         }
 
         let collisions = self
@@ -108,7 +115,7 @@ impl App {
 
         let collisions_to_collect: Vec<CollisionData> = collisions.into_iter().collect();
         for collision in collisions_to_collect {
-            //self.collisions.push(CollisionEffect{event: collision, ttl: std::time::Duration::from_secs_f64(0.1)});
+            self.collisions.push(CollisionEffect{event: collision, ttl: std::time::Duration::from_secs_f64(0.05)});
         }
 
         let delta_time = std::time::Duration::from_secs_f64(args.dt);
@@ -128,7 +135,6 @@ fn main() {
     if controlled {
         let radius = 25.0;
         let edge_length = 50.0;
-
 
         let mut body = Body::new(
             Shape::Circle { radius },
@@ -187,22 +193,22 @@ fn main() {
         world.add(body);
     } else {
         let mut rng = rand::thread_rng();
-        for _ in 0..10 {
-            let x = rng.gen_range(-400.0..400.0);
-            //let y = rng.gen_range(-300.0..300.0);
+        for _ in 0..40 {
+            let x = rng.gen_range(-700.0..700.0);
+            let y = rng.gen_range(-400.0..-200.0);
             let edge_length = rng.gen_range(20.0..45.0);
 
             let body = Body::new(
                 Shape::Square { edge_length },
-                Vec2::new_at(x, -200.0),
+                Vec2::new_at(x, y),
                 Mass::Infinity,
             );
             world.add(body);
         }
 
         for _ in 0..2000 {
-            let x = rng.gen_range(-2000.0..2000.0);
-            let y = rng.gen_range(-1500.0..1500.0);
+            let x = rng.gen_range(-1000.0..1000.0);
+            let y = rng.gen_range(500.0..4500.0);
             let dx = rng.gen_range(-50.0..50.0);
             let dy = rng.gen_range(-50.0..50.0);
             let radius = rng.gen_range(5.0..12.0);
@@ -223,7 +229,7 @@ fn main() {
     let opengl = OpenGL::V3_2;
 
     // Create a Glutin window.
-    let mut window: Window = WindowSettings::new("spinning-square", [800, 600])
+    let mut window: Window = WindowSettings::new("wirt-collision-rs", [800, 600])
         .graphics_api(opengl)
         .exit_on_esc(true)
         .build()

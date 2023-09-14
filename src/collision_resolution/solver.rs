@@ -55,7 +55,7 @@ pub fn resolve_collision(lhs: &mut Body, rhs: &mut Body, collision: &CollisionEv
 
     let lhs_move_per_inverse_mass =
         collision.normal * (collision.penetration_depth / total_inverse_mass);
-    let rhs_move_per_inverse_mass =
+    let _rhs_move_per_inverse_mass =
         collision.normal * (collision.penetration_depth / -total_inverse_mass);
 
     lhs.position += lhs_move_per_inverse_mass.scaled(lhs_inverse_mass);

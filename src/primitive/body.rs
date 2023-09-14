@@ -2,7 +2,7 @@ use crate::Vec2;
 use crate::Shape;
 use crate::primitive::Mass;
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct Body {
     shape: Shape,
     mass: Mass,

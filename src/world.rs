@@ -5,6 +5,7 @@ use crate::bsp::aabb::Aabb;
 use crate::bsp::entry::Entry;
 use crate::bsp::tree::Tree;
 use crate::collision_resolution::{self, CollisionEvent};
+use crate::constraint::Constraint;
 use crate::primitive::Body;
 use crate::Vec2;
 
@@ -15,6 +16,7 @@ pub struct Entity {
 
 pub struct World {
     bodies: HashMap<Entity, Body>,
+    constraints: Vec<Box<dyn Constraint>>,
     last_id: usize,
 }
 
@@ -27,6 +29,7 @@ impl World {
     pub fn new() -> Self {
         Self {
             bodies: HashMap::new(),
+            constraints: vec![],
             last_id: 0,
         }
     }
@@ -35,6 +38,11 @@ impl World {
         self.last_id += 1;
         self.bodies.insert(Entity { id: self.last_id }, body);
         Entity { id: self.last_id }
+    }
+
+    pub fn add_constraint(&mut self, constraint: Box<dyn Constraint>) 
+    {
+        self.constraints.push(constraint);
     }
 
     pub fn remove(&mut self, entity: Entity) {
@@ -56,6 +64,10 @@ impl World {
         self.bodies.values()
     }
 
+    pub fn entities(&self) -> impl Iterator<Item = (&Entity, &Body)> {
+        self.bodies.iter()
+    }
+
     pub fn ids(&self) -> impl Iterator<Item = Entity> + '_ {
         self.bodies.keys().copied()
     }
@@ -63,6 +75,13 @@ impl World {
     pub fn update(&mut self, dt: std::time::Duration) -> Vec<CollisionData> {
         let delta = dt.as_secs_f64();
 
+        for constraint in &self.constraints {
+            let entity_refs: [&Entity; 2] = [&constraint.get_first_entity(), &constraint.get_second_entity()];
+            let [lhs, rhs] = self.bodies.get_many_mut(entity_refs).unwrap();
+
+            constraint.process(lhs, rhs, delta);
+        }
+        
         for body in self.bodies.values_mut() {
             body.position += body.velocity * delta;
 
@@ -103,7 +122,7 @@ impl World {
             return;
         }
 
-        let restitution = 0.9;
+        let restitution = 0.8;
         let new_separating_velocity = -separating_velocity * restitution;
         let delta_velocity = new_separating_velocity - separating_velocity;
 
