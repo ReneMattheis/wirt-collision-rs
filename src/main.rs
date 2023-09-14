@@ -47,25 +47,19 @@ impl App {
         self.gl.draw(args.viewport(), |c, gl| {
             clear(BLACK, gl);
 
+            let transform = c
+                .transform
+                .trans(x, y);
+
             for body in self.world.bodies() {
+                let transform = transform.trans(body.position.x, -body.position.y);
+
                 if let Shape::Circle { radius } = body.get_shape() {
                     let circ = ellipse::circle(0.0, 0.0, *radius);
-
-                    let transform = c
-                        .transform
-                        .trans(x, y)
-                        .trans(body.position.x, -body.position.y);
-
                     ellipse(RED, circ, transform, gl);
                 } else if let Shape::Square { edge_length } = body.get_shape() {
                     let square =
                         rectangle::square(-edge_length / 2.0, -edge_length / 2.0, *edge_length);
-
-                    let transform = c
-                        .transform
-                        .trans(x, y)
-                        .trans(body.position.x, -body.position.y);
-
                     rectangle(RED, square, transform, gl);
                 }
             }
@@ -130,99 +124,36 @@ impl App {
 fn main() {
     let mut world: World = World::new();
 
-    let controlled = false;
+    let mut rng = rand::thread_rng();
+    for _ in 0..40 {
+        let x = rng.gen_range(-700.0..700.0);
+        let y = rng.gen_range(-400.0..-200.0);
+        let edge_length = rng.gen_range(20.0..45.0);
 
-    if controlled {
-        let radius = 25.0;
-        let edge_length = 50.0;
+        let body = Body::new(
+            Shape::Square { edge_length },
+            Vec2::new_at(x, y),
+            Mass::Infinity,
+        );
+        world.add(body);
+    }
+
+    for _ in 0..2000 {
+        let x = rng.gen_range(-1000.0..1000.0);
+        let y = rng.gen_range(500.0..4500.0);
+        let dx = rng.gen_range(-50.0..50.0);
+        let dy = rng.gen_range(-50.0..50.0);
+        let radius = rng.gen_range(5.0..12.0);
 
         let mut body = Body::new(
             Shape::Circle { radius },
-            Vec2::new_at(160.0, -120.0),
+            Vec2::new_at(x, y),
             Mass::Value(PI * radius.powi(2)),
         );
-        body.velocity.x = -30.0;
+
+        body.velocity.x = dx;
+        body.velocity.y = dy;
         world.add(body);
-
-        let mut body = Body::new(
-            Shape::Circle { radius },
-            Vec2::new_at(0.0, -120.0),
-            Mass::Value(PI * radius.powi(2)),
-        );
-        body.velocity.x = 10.0;
-        world.add(body);
-
-        let mut body = Body::new(
-            Shape::Circle { radius },
-            Vec2::new_at(-160.0, -120.0),
-            Mass::Value(PI * radius.powi(2)),
-        );
-        body.velocity.x = 30.0;
-        world.add(body);
-
-        let mut body = Body::new(
-            Shape::Square { edge_length },
-            Vec2::new_at(-200.0, 120.0),
-            Mass::Value(edge_length.powi(2)),
-        );
-        body.velocity.x = 30.0;
-        world.add(body);
-
-        let mut body = Body::new(
-            Shape::Square { edge_length },
-            Vec2::new_at(200.0, 120.0),
-            Mass::Value(edge_length.powi(2)),
-        );
-        body.velocity.x = -30.0;
-        world.add(body);
-
-        let mut body = Body::new(
-            Shape::Square { edge_length },
-            Vec2::new_at(-200.0, 20.0),
-            Mass::Value(edge_length.powi(2)),
-        );
-        body.velocity.x = 30.0;
-        world.add(body);
-
-        let mut body = Body::new(
-            Shape::Circle { radius },
-            Vec2::new_at(200.0, -20.0),
-            Mass::Value(edge_length.powi(2)),
-        );
-        body.velocity.x = -30.0;
-        world.add(body);
-    } else {
-        let mut rng = rand::thread_rng();
-        for _ in 0..40 {
-            let x = rng.gen_range(-700.0..700.0);
-            let y = rng.gen_range(-400.0..-200.0);
-            let edge_length = rng.gen_range(20.0..45.0);
-
-            let body = Body::new(
-                Shape::Square { edge_length },
-                Vec2::new_at(x, y),
-                Mass::Infinity,
-            );
-            world.add(body);
-        }
-
-        for _ in 0..2000 {
-            let x = rng.gen_range(-1000.0..1000.0);
-            let y = rng.gen_range(500.0..4500.0);
-            let dx = rng.gen_range(-50.0..50.0);
-            let dy = rng.gen_range(-50.0..50.0);
-            let radius = rng.gen_range(5.0..12.0);
-
-            let mut body = Body::new(
-                Shape::Circle { radius },
-                Vec2::new_at(x, y),
-                Mass::Value(PI * radius.powi(2)),
-            );
-
-            body.velocity.x = dx;
-            body.velocity.y = dy;
-            world.add(body);
-        }
     }
 
     // Change this to OpenGL::V2_1 if not working.
